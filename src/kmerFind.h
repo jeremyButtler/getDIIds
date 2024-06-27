@@ -101,11 +101,11 @@ typedef struct alnSet alnSet;
 /*this is about twice as fast, but also misses half the
 `   results
 */
-#define def_minKmerPerc_kmerFind 0.4f /*old .3*/
+#define def_minKmerPerc_kmerFind 0.4f
 #define def_percShift_kmerFind 0.5f
 #define def_extraNtInWin_kmerFind 1.0f
 #define def_lenKmer_kmerFind 5
-   /*3 is slower than the waterman alone*/
+   /*3mers are slower than the waterman alone*/
 
 /*-------------------------------------------------------\
 | ST01: tblST_kmerFind
@@ -420,7 +420,7 @@ setUpTblST_kmerFind(
 |       to build an refST_kmerFind array from
 |       - column 1: primer id
 |       - column 2: paired (True, Yes, 1) or unpaired
-|       - column 3: foward primer
+|       - column 3: forward primer
 |       - column 4: reverse primer
 |   - lenKmerUC:
 |     o length of one kmer

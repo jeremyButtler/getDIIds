@@ -393,7 +393,13 @@ freeHeap_fluST(
 |       coordinate on the sequence
 |   - segNumSC:
 |     o pointer to signed char to hold the segment number
-|       found
+|       decided on
+|   - forSegSC:
+|     o pointer to signed char to hold the detected foward
+|       primer segment number
+|   - revSegSC:
+|     o pointer to signed char to hold the detected foward
+|       primer segment number
 |   - mappedLenUL:
 |     o pionter to unsigned long to hold the length of
 |       region from start to end of primers
@@ -430,6 +436,8 @@ detectDI_fluST(
    unsigned long seqStartAryUL[], /*seq map coordiantes*/
    unsigned long seqEndAryUL[],   /*seq map coordiantes*/
    signed char *segNumSC,
+   signed char *forSegSC,
+   signed char *revSegSC,
    unsigned long *mappedLenUL
 );
 
@@ -459,8 +467,14 @@ pidHeader_fluST(
 |     o c-string with read id
 |   - segNumSC:
 |     o segment number found
+|   - forSegSC:
+|     o segment number of the foward primer
+|   - revSegSC:
+|     o segment number of the reverse primer
 |   - diFlagSC:
 |     o return from detect_DI_fluST (fun15)
+|   - dirArySC:
+|     o array of primer directions
 |   - scoreArySL:
 |     o array of alignment scores
 |   - maxForScoreF:
@@ -490,6 +504,8 @@ pid_fluST(
    struct fluST *fluSTPtr,
    signed char *idStr,
    signed char segNumSC,
+   signed char forSegSC,
+   signed char revSegSC,
    signed char diFlagSC,
    signed char dirArySC[],
    signed long scoreArySL[],

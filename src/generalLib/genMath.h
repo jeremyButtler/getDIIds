@@ -149,7 +149,6 @@
    */ \
 )
 
-
 /*-------------------------------------------------------\
 | Fun05: min_genMath
 |  - Find the Minimum value (branchless)

@@ -35,11 +35,11 @@
 #include "generalLib/dataTypeShortHand.h"
 #include "generalLib/charCp.h"
 #include "generalLib/ulCp.h"
+#include "generalLib/genMath.h"
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
 ! Hidden libraries:
 !   - .c   #include "memwater/memwater.h"
-!   - .h   #include "generalLib/genMath.h"
 !   - .h   #include "generalLib/shellSort.h"
 !   - .h   #include "generalLib/base10str.h"
 !   - .h   #include "generalLib/ntToTwoBit.h"
@@ -69,7 +69,14 @@ main(
    ' Main TOC:
    '   o main sec01:
    '     - variable declerations
-   ^   - get user input and initialize structures
+   '   o main sec02:
+   '     - get user input and initialize structures
+   '   o main sec03:
+   '     - set up primer sequences and kmer tables
+   '   o main sec04:
+   '     - find and print primer positions
+   '   o main sec05:
+   '     - clean up
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -143,7 +150,11 @@ main(
    /*variables holding return values*/
    float percLenDiffF = 0; /*primers map len versus read*/
    schar diFlagSC = 0; /*flag for di/mv/v RNA*/
+
    schar segNumSC = 0; /*holds segment number of read*/
+   schar forSegSC = 0; /*holds forward segment id*/
+   schar revSegSC = 0; /*holds reverse segment id*/
+
    ulong mapLenUL = 0; /*length between primers*/
 
    /*****************************************************\
@@ -448,9 +459,15 @@ main(
    ^     - check if sequence passes filters
    ^   o main sec04 sub03:
    ^     - find primer positions
+   ^   o main sec04 sub04:
+   ^     - check if has primers and is di/mvRNA
    ^   o main sec04 sub05:
-   ^     - get the next sequence
+   ^     - check if read is within print settings
    ^   o main sec04 sub06:
+   ^     - print read (passed checks)
+   ^   o main sec04 sub07:
+   ^     - get the next sequence
+   ^   o main sec04 sub08:
    ^     - check for errors
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
@@ -543,7 +560,7 @@ main(
 
       /**************************************************\
       * Main Sec04 Sub04:
-      *   - check if is di/mvRNA and print
+      *   - check if has primers and is di/mvRNA
       \**************************************************/
 
       if(! errSC)
@@ -557,8 +574,15 @@ main(
                seqStartAryUL,  /*first aligned seq base*/
                seqEndAryUL,    /*last aligned seq base*/
                &segNumSC,      /*gets segment number*/
+               &forSegSC,      /*gets foward segment #*/
+               &revSegSC,      /*gets reverse segment #*/
                &mapLenUL
          );
+
+         /***********************************************\
+         * Main Sec04 Sub05:
+         *   - check if read is within print settings
+         \***********************************************/
 
          /*check to see if printing out*/
          keepBl |=
@@ -582,7 +606,23 @@ main(
          if(diFlagSC & def_diffSeg_fluST)
          { /*If: segments disagreeded*/
             if(diffBl)
+            { /*If: keeping disagreements*/
                keepBl = 1;
+
+               percLenDiffF = (float) mapLenUL;
+
+               percLenDiffF /=
+                  (float)
+                  max_genMath(
+                     fluStackST.lenSegArySI[forSegSC],
+                     fluStackST.lenSegArySI[revSegSC]
+                  ); /*find longest possible*/
+
+               keepBl &= (percLenDiffF <= maxPercLenF);
+            } /*If: keeping disagreements*/
+
+            else
+               keepBl = 0; /*discarding disagreements*/
          } /*If: segments disagreeded*/
 
          else
@@ -597,10 +637,18 @@ main(
          /*check if could id the segment (found result)*/
          if(keepBl)
          { /*If: print segment (passes filters)*/
+
+            /********************************************\
+            * Main Sec04 Sub06:
+            *   - print read (passed checks)
+            \********************************************/
+
             pid_fluST(
                 &fluStackST,
                 (schar *) seqStackST.idStr, /*read id*/
-                segNumSC,          /*segment number*/
+                segNumSC,      /*segment number*/
+                forSegSC,      /*has foward segment #*/
+                revSegSC,      /*has reverse segment #*/
                 diFlagSC,
                 dirArySC,      /*primer direction*/
                 scoreArySL,    /*primer scores*/
@@ -618,7 +666,7 @@ main(
       } /*If: I found at least on primer*/
 
       /**************************************************\
-      * Main Sec04 Sub05:
+      * Main Sec04 Sub07:
       *   - get the next sequence
       \**************************************************/
 
@@ -646,7 +694,7 @@ main(
    } /*Loop: find primers in sequences*/
 
    /*****************************************************\
-   * Main Sec04 Sub06:
+   * Main Sec04 Sub08:
    *   - check for errors
    \*****************************************************/
 

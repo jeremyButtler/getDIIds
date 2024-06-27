@@ -34,7 +34,7 @@ typedef struct fluST fluST;
 
 #define def_year_inputGetDIIds 2024
 #define def_month_inputGetDIIds 6
-#define def_day_inputGetDIIds 26
+#define def_day_inputGetDIIds 27
 
 #define def_faPrimFile_inputGetDIIds 1
 #define def_tsvPrimFile_inputGetDIIds 2

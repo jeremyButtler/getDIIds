@@ -9,6 +9,8 @@ This requires full length amplicons, so the old ONT rapid
 
 # Install:
 
+Requires some kind of C compiler. Default is `cc`.
+
 ## Static Linux build
 
 ```
@@ -26,6 +28,11 @@ git clone https://github.com/jeremybuttler/getDIIds
 make mac
 sudo make install
 ```
+
+# Run:
+
+You can run using `getDIIds -fq reads.fastq > ids.tsv`.
+  For the help message do `getDIIds -h`.
 
 # How works:
 
@@ -51,6 +58,29 @@ sudo make install
    - reads with a mapping length that is 10% larger (110%)
      than the expected segment length are discarded
 4. Kept read ids are printed out
+
+# Output:
+
+This outputs a tsv (tab deliminated file) with the read
+  ids that were kept.
+
+- Columns:
+  - Column 1 has read id
+  - Column 2 has segment read is from
+    - disagreements is "forward-segment/reverse-segment"
+  - Column 3 has classification (vRNA/diRNA/mvRNA)
+    - disagreements is "forward-class/reverse-class"
+  - column 4 is the mapped length
+    - distance between primer ends
+  - column 5 is the read length
+  - column 6 is the segments expected length
+    - disagreements is "forward-length/reverse-length"
+  - column 7 is
+    - both for both primers supporting
+    - for for forward primer support only
+    - rev for forward primer support only
+    - diff if primer positions disagree
+  - remaining columns are primers stats
 
 # Side program (primFind):
 
@@ -84,7 +114,6 @@ sudo make install
 - The idea of making a DI detection program was from
   Eric Bortz.
 - The TB crew (Tara Ness and Bryce Inman) for being part
-  of the TB program. This is the frezeTB project that
-  contributed the source code for the primer
-  searching step.
+  of the TB program. This is the freezeTB project that
+  contributed the source code for the primer search step.
 - Family for being there.

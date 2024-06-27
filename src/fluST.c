@@ -82,6 +82,7 @@
 
 /*only .h files*/
 #include "generalLib/dataTypeShortHand.h"
+#include "generalLib/genMath.h"
 #include "fluSeg.h"
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
@@ -1115,7 +1116,13 @@ freeHeap_fluST(
 |       coordinate on the sequence
 |   - segNumSC:
 |     o pointer to signed char to hold the segment number
-|       found
+|       decided on
+|   - forSegSC:
+|     o pointer to signed char to hold the detected foward
+|       primer segment number
+|   - revSegSC:
+|     o pointer to signed char to hold the detected foward
+|       primer segment number
 |   - mappedLenUL:
 |     o pionter to unsigned long to hold the length of
 |       region from start to end of primers
@@ -1152,6 +1159,8 @@ detectDI_fluST(
    unsigned long seqStartAryUL[], /*seq map coordiantes*/
    unsigned long seqEndAryUL[],   /*seq map coordiantes*/
    signed char *segNumSC,
+   signed char *forSegSC,
+   signed char *revSegSC,
    unsigned long *mappedLenUL
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun15 TOC:
@@ -1174,8 +1183,6 @@ detectDI_fluST(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    schar retSC = 0;
-   schar forSegSC = 0;
-   schar revSegSC = 0;
 
    unsigned long lenSeqUL = 0;
 
@@ -1185,6 +1192,8 @@ detectDI_fluST(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    *segNumSC = def_noSeg_fluST;/*chagned if find segment*/
+   *forSegSC = def_noSeg_fluST;/*chagned if find segment*/
+   *revSegSC = def_noSeg_fluST;/*chagned if find segment*/
 
    if(hitAryUI[0] == 0)
       return 0; /*no support for foward primer*/
@@ -1211,7 +1220,7 @@ detectDI_fluST(
 
    if(dirArySC[0] == 'F')
    { /*If: foward primer mapped forward*/
-      forSegSC =
+      *forSegSC =
          findSeg_fluST(
             fluSTPtr,
             &seqStr[seqEndAryUL[0] + 1],
@@ -1222,7 +1231,7 @@ detectDI_fluST(
 
    else
    { /*Else: foward primer mapped reverse*/
-      forSegSC =
+      *forSegSC =
          findSeg_fluST(
             fluSTPtr,
             &seqStr[seqStartAryUL[0] - 1],
@@ -1244,7 +1253,7 @@ detectDI_fluST(
 
    if(dirArySC[1] == 'F')
    { /*If: reverse primer mapped forward*/
-      revSegSC =
+      *revSegSC =
          findSeg_fluST(
             fluSTPtr,
             &seqStr[seqEndAryUL[1] + 1],
@@ -1255,7 +1264,7 @@ detectDI_fluST(
 
    else
    { /*Else: foward primer mapped reverse*/
-      revSegSC =
+      *revSegSC =
          findSeg_fluST(
             fluSTPtr,
             &seqStr[seqStartAryUL[1] - 1],
@@ -1269,25 +1278,42 @@ detectDI_fluST(
    ^   - check if have full segment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   if(forSegSC == revSegSC)
+   if(*forSegSC == *revSegSC)
    { /*If: both segments supported the same answer*/
-      if(forSegSC == def_noSeg_fluST)
+      if(*forSegSC == def_noSeg_fluST)
          return 0;
 
       retSC = def_segFound_fluST | def_revSegSup_fluST;
-      *segNumSC = forSegSC;
+      *segNumSC = *forSegSC;
    } /*If: both segments supported the same answer*/
 
-   else if( (forSegSC | revSegSC) != def_noSeg_fluST )
-      return def_diffSeg_fluST; /*disagreement*/
+   else if( (*forSegSC | *revSegSC) != def_noSeg_fluST )
+   { /*Else If: primers support different segments*/
+
+      if(*mappedLenUL <= (ulong) fluSTPtr->maxMvLenSI)
+        return retSC | def_mvFound_fluST;
+
+      lenSeqUL =
+         min_genMath(
+            fluSTPtr->lenSegArySI[*forSegSC],
+            fluSTPtr->lenSegArySI[*revSegSC]
+         ); /*find shortest segment length*/
+
+      lenSeqUL -= fluSTPtr->minDiDelSI;
+
+      if(*mappedLenUL < lenSeqUL)
+         retSC |= def_diFound_fluST;
+
+      return retSC | def_diffSeg_fluST; /*disagreement*/
+   } /*Else If: primers support different segments*/
 
    else
    { /*Else: I have only one segment*/
-      *segNumSC = forSegSC & revSegSC; /*one is -1*/
+      *segNumSC = *forSegSC & *revSegSC; /*one is -1*/
 
       retSC = def_partSeg_fluST;
 
-      if(revSegSC != def_noSeg_fluST)
+      if(*revSegSC != def_noSeg_fluST)
         retSC |= def_revSegSup_fluST;
    } /*Else: I have only one segment*/
 
@@ -1335,22 +1361,27 @@ pidHeader_fluST(
 
    fprintf(
       (FILE *) outFILE,
-      "\tfor_seq_start\tfor_seq_end\tfor_prim_start"
+      "\tfor_seg\tfor_seq_start\tfor_seq_end"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "\tfor_prim_end"
+      "\tfor_prim_start\tfor_prim_end"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "\trev_score\trev_max_score\tref_dir\trev_seq_start"
+      "\trev_score\trev_max_score\tref_dir\trev_seg"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "\trev_seq_end\trev_prim_start\trev_prim_end\n"
+      "\trev_seq_start\trev_seq_end\trev_prim_start"
+   );
+ 
+   fprintf(
+      (FILE *) outFILE,
+      "\trev_prim_end\n"
    );
 } /*pidHeader_fluST*/
 
@@ -1365,8 +1396,14 @@ pidHeader_fluST(
 |     o c-string with read id
 |   - segNumSC:
 |     o segment number found
+|   - forSegSC:
+|     o segment number of the foward primer
+|   - revSegSC:
+|     o segment number of the reverse primer
 |   - diFlagSC:
 |     o return from detect_DI_fluST (fun15)
+|   - dirArySC:
+|     o array of primer directions
 |   - scoreArySL:
 |     o array of alignment scores
 |   - maxForScoreF:
@@ -1396,6 +1433,8 @@ pid_fluST(
    struct fluST *fluSTPtr,
    signed char *idStr,
    signed char segNumSC,
+   signed char forSegSC,
+   signed char revSegSC,
    signed char diFlagSC,
    signed char dirArySC[],
    signed long scoreArySL[],
@@ -1431,7 +1470,9 @@ pid_fluST(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    signed char *tmpStr = idStr;
+   signed char *diffStr = 0;
    signed char tmpSC = 0;
+   ulong lenSeqUL = 0; /*for reads with multi segments*/
 
    /*get truncate id at first white space*/
    while(*tmpStr++ > 32) ;
@@ -1448,8 +1489,10 @@ pid_fluST(
    if(diFlagSC & def_diffSeg_fluST)
       fprintf(
          (FILE *) outFILE,
-         "%s\tNA",
-         idStr + 1
+         "%s\t%s/%s",
+         idStr + 1,
+         fluSTPtr->segIdAryStr[forSegSC],
+         fluSTPtr->segIdAryStr[revSegSC]
       ); /*print out read id and segment id*/
 
    else
@@ -1465,29 +1508,68 @@ pid_fluST(
    ^   - print out the RNA type
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   if(diFlagSC & def_diffSeg_fluST)
-      fprintf(
-         (FILE *) outFILE,
-         "\tNA"
-      ); /*print was diRNA*/
-
-   else if(diFlagSC & def_diFound_fluST)
-      fprintf(
-         (FILE *) outFILE,
-         "\tdiRNA"
-      ); /*print was diRNA*/
+   if(diFlagSC & def_diFound_fluST)
+      tmpStr = (schar *) "diRNA";
 
    else if(diFlagSC & def_mvFound_fluST)
-      fprintf(
-         (FILE *) outFILE,
-         "\tmvRNA"
-      ); /*print was mvRNA*/
+      tmpStr = (schar *) "mvRNA";
 
    else
+      tmpStr = (schar *) "vRNA";
+
+   if(diFlagSC & def_diffSeg_fluST)
+   { /*If: read had two different segments supported*/
+      if(mappedLenUL < (ulong) fluSTPtr->maxMvLenSI)
+         diffStr = (schar *) "mvRNA";
+
+      else
+      { /*Else: is vRNA or diRNA*/
+         lenSeqUL =
+            max_genMath(
+               fluSTPtr->lenSegArySI[forSegSC],
+               fluSTPtr->lenSegArySI[revSegSC]
+            ); /*find shortest segment length*/
+
+         lenSeqUL -= fluSTPtr->minDiDelSI;
+
+         if(mappedLenUL < lenSeqUL)
+            diffStr = (schar *) "diRNA";
+         else
+            diffStr = (schar *) "vRNA";
+      } /*Else: is vRNA or diRNA*/
+
+      if(
+           fluSTPtr->lenSegArySI[forSegSC]
+         > fluSTPtr->lenSegArySI[revSegSC]
+      ){ /*If: foward segment is shortest*/
+         fprintf(
+            (FILE *) outFILE,
+            "\t%s/%s",
+            tmpStr,
+            diffStr
+         ); /*print was vRNA*/
+      } /*If: foward segment is shortest*/
+
+      else
+      { /*Else: foward segment id is longest*/
+         fprintf(
+            (FILE *) outFILE,
+            "\t%s/%s",
+            diffStr,
+            tmpStr
+         ); /*print was vRNA*/
+      } /*Else: foward segment id is longest*/
+
+   } /*If: read had two different segments supported*/
+
+   else
+   { /*Else: only one segment, do signle print*/
       fprintf(
          (FILE *) outFILE,
-         "\tvRNA"
+         "\t%s",
+         tmpStr
       ); /*print was vRNA*/
+   } /*Else: only one segment, do signle print*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun17 Sec04:
@@ -1498,9 +1580,11 @@ pid_fluST(
    { /*If: had disagreement in segment id*/
       fprintf(
          (FILE *) outFILE,
-         "\t%lu\t%lu\tNA",
+         "\t%lu\t%lu\t%i/%i",
          mappedLenUL,
-         seqLenUL
+         seqLenUL,
+         fluSTPtr->lenSegArySI[forSegSC],
+         fluSTPtr->lenSegArySI[revSegSC]
       ); /*expected length for segment*/
    } /*If: had disagreement in segment id*/
 
@@ -1550,10 +1634,32 @@ pid_fluST(
 
    fprintf(
       (FILE *) outFILE,
-      "\t%lu\t%f\t%c\t%lu\t%lu\t%lu\t%lu",
+      "\t%lu\t%f\t%c",
       scoreArySL[0],
       maxForScoreF,
-      dirArySC[0],
+      dirArySC[0]
+   );
+
+   if(forSegSC == def_noSeg_fluST)
+   { /*If: no forward segment was found*/
+      fprintf(
+         (FILE *) outFILE,
+         "\t0"
+      );
+   } /*If: no forward segment was found*/
+
+   else
+   { /*Else: a forward segment was found*/
+      fprintf(
+         (FILE *) outFILE,
+         "\t%s",
+         fluSTPtr->segIdAryStr[forSegSC]
+      );
+   } /*Else: a forward segment was found*/
+
+   fprintf(
+      (FILE *) outFILE,
+      "\t%lu\t%lu\t%lu\t%lu",
       seqStartAryUL[0] + 1,
       seqEndAryUL[0] + 1,
       primStartAryUL[0] + 1,
@@ -1567,10 +1673,32 @@ pid_fluST(
 
    fprintf(
       (FILE *) outFILE,
-      "\t%lu\t%f\t%c\t%lu\t%lu\t%lu\t%lu\n",
+      "\t%lu\t%f\t%c",
       scoreArySL[1],
       maxRevScoreF,
-      dirArySC[1],
+      dirArySC[1]
+   );
+
+   if(revSegSC == def_noSeg_fluST)
+   { /*If: no reveres segment was found*/
+      fprintf(
+         (FILE *) outFILE,
+         "\t0"
+      );
+   } /*If: no reverse segment was found*/
+
+   else
+   { /*Else: a reverse segment was found*/
+      fprintf(
+         (FILE *) outFILE,
+         "\t%s",
+         fluSTPtr->segIdAryStr[revSegSC]
+      );
+   } /*Else: a reverse segment was found*/
+
+   fprintf(
+      (FILE *) outFILE,
+      "\t%lu\t%lu\t%lu\t%lu\n",
       seqStartAryUL[1] + 1,
       seqEndAryUL[1] + 1,
       primStartAryUL[1] + 1,

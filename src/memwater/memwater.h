@@ -48,7 +48,7 @@
 #define MEMORY_EFFICENT_WATERMAN_H
 
 /*-------------------------------------------------------\
-| Fun08: memWater
+| Fun09: memWater
 |   - Performs a memory efficent Smith Waterman alignment
 |     on a pair of sequences
 | Input;
