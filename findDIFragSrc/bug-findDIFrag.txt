@@ -1,0 +1,24 @@
+b findDIFrag.c:386
+b findDIFrag.c:402
+#b findDIFrag.c:382 if seqEntryUI == 47
+#b findDIFrag.c:382 if seqEntryUI == 48
+#b ../generalAln/dirMatrix.c:690
+
+r
+
+define pdel
+   set $cigCnt = 0
+   set $samStruct = $arg0
+
+   printf "%s\t", $samStruct->qryIdStr
+
+   while($cigCnt < $samStruct->lenCigUI)
+      if($samStruct->cigTypeStr[$cigCnt] == 'D')
+         printf "%i\t", $samStruct->cigValAryI[$cigCnt]
+      end
+
+      set $cigCnt = $cigCnt + 1
+   end
+
+   printf "\n"
+end

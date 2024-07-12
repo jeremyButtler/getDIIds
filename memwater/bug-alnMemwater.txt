@@ -1,0 +1,3 @@
+b alnMemwater.c:1184
+
+r -ref $HOME/files/testing/diflu/PB1-blast.fa -qry-fq ../findDIFragSrc/del-PB1-short-vRNA.fq
