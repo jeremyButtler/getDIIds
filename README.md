@@ -46,6 +46,18 @@ During the install step the path is searched for the
 make install PREFIX=/path/to/location
 ```
 
+# Updates:
+
+- 2024-07-12:
+  - fixed the HA and NS miscalls do to not realizing both
+    had the same reverse primer sequence in getDIIds
+  - added findDIFrag for fragments (not very good, but
+    then everything here is so/so at best)
+  - added getDICoords to scan sam files for DI events and
+    their coordinates
+  - allowed the aligners to be run separately and added in
+    a waterman
+    
 # Programs:
 
 ## flu programs:
@@ -106,6 +118,8 @@ You can change the scoring matrix or what counts as a
 All these aligners only keep track of one row of scores
   at a time. So, most of the memory cost is from the
   directional matrix.
+
+TODO: add in an alignment ouput option
 
 - alnwater:
   - does a waterman alignment
