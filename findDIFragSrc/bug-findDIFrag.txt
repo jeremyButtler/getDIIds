@@ -1,10 +1,6 @@
-b findDIFrag.c:386
-b findDIFrag.c:402
-#b findDIFrag.c:382 if seqEntryUI == 47
-#b findDIFrag.c:382 if seqEntryUI == 48
-#b ../generalAln/dirMatrix.c:690
+b findDIFrag.c:1248
 
-r
+r -ref $HOME/files/testing/diflu/fluGenbankRef.fa -fq $HOME/files/testing/diflu/SRR29165088.fastq
 
 define pdel
    set $cigCnt = 0

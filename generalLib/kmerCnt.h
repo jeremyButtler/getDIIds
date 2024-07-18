@@ -34,6 +34,9 @@
 '   o fun12: get_kmerCnt
 '     - gets number of matching kmers between a kmerCnt
 '       structure and the kmer arrays
+'   o fun13: faToKmerCnt_kmerCnt
+'     - converts a the sequences in a fasta file to a
+'       kmerCnt array
 '   o license:
 '     - licensing for this code (public domain / mit)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -325,6 +328,37 @@ get_kmerCnt(
    struct kmerCnt *kmerCntSTPtr, /*table to get counts*/
    signed int *kmerArySI,        /*sequence uniqe kmers*/
    signed int *cntArySI          /*sequence kmer counts*/
+);
+
+/*-------------------------------------------------------\
+| Fun13: faToKmerCnt_kmerCnt
+|   - converts a the sequences in a fasta file to a
+|     kmerCnt array
+| Input:
+|   - faFileStr:
+|     o path to and name of fasta file with sequnces
+|   - lenKmerUC:
+|     o length of one kmer
+|   - numSeqUI:
+|     o pointer to unsigned int to hold the number of
+|       sequences in the kmerCnt array
+|   - errSCPtr:
+|     o pointer to signed char to hold the errors
+| Output:
+|   - Modfies:
+|     o numSeqUI to have the number of sequences in the
+|       returned kmerCnt array
+|     o errSCPtr to hold errors
+|       - 0 for no erors
+|       - def_fileErr_kmerCnt if could not open faFileStr
+|       - def_memErr_kmerCnt for memory errors
+\-------------------------------------------------------*/
+struct kmerCnt *
+faToKmerCnt_kmerCnt(
+   signed char *faFileStr,/*path to fasta file*/
+   unsigned char lenKmerUC, /*length of one kmer*/
+   unsigned int *numSeqUI,/*will hold number of sequnces*/
+   signed char *errSCPtr  /*holds error message*/
 );
 
 #endif

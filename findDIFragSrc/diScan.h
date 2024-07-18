@@ -44,26 +44,6 @@ typedef struct kmerCnt kmerCnt;
    */
 
 /*-------------------------------------------------------\
-| Fun01: sam_diScan
-|   - scans samEntry struct for large deletions
-|     (DI sequence)
-| Input:
-|   - samSTPtr:
-|     o pointer to samEntry structure to check if DI
-|   - minDIDelUI:
-|     o minimum deletion size to flag as a DI sequence
-| Output:
-|   - Returns
-|     o 0 if no DI events
-|     o > 0 if at least one DI event (number returned)
-\-------------------------------------------------------*/
-signed int
-sam_diScan(
-   struct samEntry *samSTPtr,
-   unsigned int minDIDelUI
-);
-
-/*-------------------------------------------------------\
 | Fun01: findSeg_diScan
 |   - uses kmer profiling to find the best matching
 |     segment
@@ -82,6 +62,8 @@ sam_diScan(
 |     o signed int array to hold kmer counts for seqSTPtr
 |   - lenKmerUC:
 |     o length of one kmer
+|   - minKmerPercF:
+|     o min percent of shared kmers to keep a read
 |   - maxKmersSI:
 |     o pointer to signed long to hold number of kmers
 |       that mapped (- for reverse, + for forward)
@@ -102,6 +84,7 @@ findSeg_diScan(
    signed int *kmerArySI,      /*holds sequence kmers*/
    signed int *cntArySI,       /*holds kmer counts*/
    unsigned char lenKmerUC,    /*length of one kmer*/
+   float minKmerPercF,         /*min perc kmers to keep*/
    signed int *maxKmersSI      /*will hold kmer count*/
 );
 
@@ -124,6 +107,8 @@ findSeg_diScan(
 |   - minPercScoreF:
 |     o minimum percent score from waterman alingment to
 |       check for DI (count as mapped)
+|   - minKmerPercF:
+|     o min percent of shared kmers to keep a read
 |   - lenKmerUC:
 |     o length of one kmer
 |   - samSTPtr:
@@ -137,6 +122,9 @@ findSeg_diScan(
 |   - minEndNtUI:
 |     o how many bases in a DI event must be to be a DI
 |       event
+|   - numKmersSIPtr:
+|     o pointer to signed int to hold the number of kmers
+|       shared with the reference
 |   - alnSetSTPtr:
 |     o pointer to alnSet struct with alignment settings
 |   - matrixSTPtr:
@@ -163,11 +151,13 @@ waterScan_diScan(
    signed int *kmerArySI,     /*holds sequence kmers*/
    signed int *cntArySI,      /*holds kmer counts*/
    float minPercScoreF,       /*min % score to check DIs*/
+   float minKmerPercF,         /*min perc kmers to keep*/
    unsigned char lenKmerUC,   /*length of one kmer*/
    unsigned int minDIDelUI,   /*min del size in DI*/
    unsigned int minPadNtUI,   /*min start/end length*/
    struct samEntry *samSTPtr, /*holds alignment*/
    signed int *segSIPtr,      /*segment mapped to*/
+   signed int *numKmersSIPtr, /*number kmers shared*/
    struct alnSet *alnSetSTPtr,/*alignment settings*/
    struct dirMatrix *matrixSTPtr /*matrix for alignment*/
 );
@@ -178,13 +168,16 @@ waterScan_diScan(
 | Input:
 |   - outFILE:
 |     o file to print header to
+|   - lenKmerUC:
+|     o length of one kmer
 | Output:
 |   - Prints:
 |     o header to outFILE
 \-------------------------------------------------------*/
 void
 phead_diScan(
-   void * outFILE
+   void * outFILE,
+   unsigned char lenKmerUC
 );
 
 /*-------------------------------------------------------\
@@ -200,6 +193,8 @@ phead_diScan(
 |     o the length of the mapped segment
 |   - scoreSL:
 |     o score for waterman alignment
+|   - numKmersSI:
+|     o number of kmers shared between ref and read
 |   - outFILE:
 |     o file to print read to
 | Output:
@@ -213,6 +208,7 @@ pfrag_diScan(
    signed int numDISI,
    signed int segLenSI,
    signed long scoreSL,
+   signed int numKmersSI,
    void * outFILE
 );
 

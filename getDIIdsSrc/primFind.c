@@ -74,7 +74,14 @@ main(
    ' Main TOC:
    '   o main sec01:
    '     - variable declerations
-   ^   - get user input and initialize structures
+   '   o main sec02:
+   '     - get user input and initialize structures
+   '   o main sec03:
+   '     - read in references and allocate memory
+   '   o main sec04:
+   '     - find and print primer positions
+   '   o main sec05:
+   '     - clean up
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\

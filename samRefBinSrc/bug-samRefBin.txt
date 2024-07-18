@@ -1,0 +1,3 @@
+b samRefBin.c:629
+
+r -sam $HOME/files/testing/diflu/map-cal2009-filt.sam -prefix "del-"

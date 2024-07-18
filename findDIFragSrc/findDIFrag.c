@@ -48,8 +48,6 @@
 #include "../generalLib/charCp.h"
 #include "../generalLib/ulCp.h"
 
-#include "fragSeg.h"
-
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
 ! Hidden libraries:
 !   - .h  #include "../generalLib/ntTo2Bit.h"
@@ -63,11 +61,13 @@
 
 #define def_year_findDIFrag 2024
 #define def_month_findDIFrag 7
-#define def_day_findDIFrag 12
+#define def_day_findDIFrag 15
 
 #define def_lenKmer_findDIFrag 7 /*length of one kmer*/
 #define def_minPercScore_findDIFrag 0.5f /*90% min socre*/
-#define def_minDels_findDIFrag 20 /*min del size to be DI*/
+#define def_minKmerPerc_findDIFrag 0.4f  /*40% min kmers*/
+
+#define def_minDels_findDIFrag 20 /*min del size for DI*/
 #define def_minPadNt_findDIFrag 12
 
 #define def_pDI_findDIFrag 1 /*1 = print DI reads*/
@@ -123,7 +123,12 @@ phelp_findDIFrag(
 
    fprintf(
     (FILE *) outFILE,
-    "findDIFrag -fq reads.fq -out-sam out.sam > out.tsv\n"
+    "findDIFrag -fq reads.fq -ref ref.fa"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      " -out-sam out.sam > out.tsv\n"
    );
 
    fprintf(
@@ -141,8 +146,10 @@ phelp_findDIFrag(
    ^   o fun02 sec02 sub03:
    ^     - print filter for DI events
    ^   o fun02 sec02 sub04:
-   ^     - filters for printing
+   ^     - score and kmer variables
    ^   o fun02 sec02 sub05:
+   ^     - filters for printing
+   ^   o fun02 sec02 sub06:
    ^     - help and version flag
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
@@ -177,6 +184,17 @@ phelp_findDIFrag(
       "    o use \"-\" for stdin\n"
    );
 
+   /*input references (fasta file)*/
+   fprintf(
+      (FILE *) outFILE,
+      "  -ref ref.fa: [Required]\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "    o fasta file with references to map reads to\n"
+   );
+
    /*output tsv*/
    fprintf(
       (FILE *) outFILE,
@@ -202,6 +220,11 @@ phelp_findDIFrag(
    fprintf(
       (FILE *) outFILE,
       "    o sam file to save aligned reads to\n"
+   );
+
+   fprintf(
+     (FILE *) outFILE,
+     "    o use \"-sam-out - -out file.tsv\" for stdout\n"
    );
 
    /*****************************************************\
@@ -252,6 +275,57 @@ phelp_findDIFrag(
 
    /*****************************************************\
    * Fun02 Sec02 Sub04:
+   *   - score and kmer variables
+   \*****************************************************/
+
+   fprintf(
+      (FILE *) outFILE,
+      "  -score-min-perc %0.2f: [Optinal; %0.2f]\n",
+      def_minPercScore_findDIFrag,
+      def_minPercScore_findDIFrag
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "    o minimum percent score to keep an alignment\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "  -kmer-min-perc %0.2f: [Optinal; %0.2f]\n",
+      def_minKmerPerc_findDIFrag,
+      def_minKmerPerc_findDIFrag
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "    o minimum percent shared kmers to do an\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "      alignment (this is between the best\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "      reference and read)\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "  -len-kmer %i: [Optinal; %i]\n",
+      def_lenKmer_findDIFrag,
+      def_lenKmer_findDIFrag
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "    o length of one kmer (kmer size)\n"
+   );
+
+   /*****************************************************\
+   * Fun02 Sec02 Sub05:
    *   - filters for printing
    \*****************************************************/
 
@@ -300,7 +374,7 @@ phelp_findDIFrag(
    );
 
    /*****************************************************\
-   * Fun02 Sec02 Sub05:
+   * Fun02 Sec02 Sub06:
    *   - help and version flag
    \*****************************************************/
 
@@ -316,7 +390,7 @@ phelp_findDIFrag(
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun02 Sec03:
-   ^   - outpub block
+   ^   - output block
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    fprintf(
@@ -326,17 +400,37 @@ phelp_findDIFrag(
 
    fprintf(
       (FILE *) outFILE,
-      "  -prints: tsv with read ids, mapped segment,\n"
+      "  - prints: tsv with read ids, mapped segment,\n"
    );
 
    fprintf(
       (FILE *) outFILE,
-      " and number of DI events to stdout/file (-out)\n"
+      "    and number of DI events to -out\n"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "  -prints: alignments to -out-sam if file input\n"
+      "    o vRNA means no large deletions were found\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "      (could be a fragment or a complete read)\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "    o diRNA means one or more large deletions\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "      were found\n"
+   );
+
+   fprintf(
+      (FILE *) outFILE,
+      "  - prints: alignments to -out-sam if file input\n"
    );
 } /*phelp_findDIFrag*/
 
@@ -351,10 +445,22 @@ phelp_findDIFrag(
 |     o c-string array with user input
 |   - fqFileStrPtr:
 |     o pointer to c-sting to set to fastq file name
+|   - refFileStrPtr:
+|     o pointer to c-sting to set to reference
+|       (fasta file) name
 |   - outFileStrPtr:
 |     o pointer to c-sting to set to output tsv file name
 |   - samFileStrPtr:
 |     o pointer to c-sting to set to output sam file name
+|   - scoreMinPercF:
+|     o pointer to float to hold the min percent score to
+|       keep a read
+|   - kmerMinPercF:
+|     o pointer to float to hold the min percent of shared
+|       kmers need to keep a read
+|   - lenKmerUCPtr:
+|     o pointer to unsigned char to hold the length of one
+|       kmer
 |   - minDIDelUIPtr:
 |     o pointer to unsigned int to hold min deletion size
 |       to call DI
@@ -382,8 +488,12 @@ input_findDIFrag(
    int numArgsSI,
    char *argAryStr[],
    signed char **fqFileStrPtr,
+   signed char **refFileStrPtr,
    signed char **outFileStrPtr,
    signed char **samFileStrPtr,
+   float *scoreMinPercF,         /*holds min % score*/
+   float *kmerMinPercF,          /*holds min % kmers*/
+   unsigned char *lenKmerUCPtr,  /*holds kmer size*/
    unsigned int *minDIDelUIPtr,
    unsigned int *minPadNtUIPtr,  /*ends non-del length*/
    signed char *pDIBlPtr,
@@ -426,14 +536,16 @@ input_findDIFrag(
    ^   o fun03 sec03 sub02:
    ^     - get deletion counts
    ^   o fun03 sec03 sub03:
-   ^     - print settings
+   ^     - read filter (score and kmer) settings
    ^   o fun03 sec03 sub04:
-   ^     - check for help message requests
-   ^   o fun03 sec03 sub04:
-   ^     - check for version number requests
+   ^     - kmer size setting
    ^   o fun03 sec03 sub05:
-   ^     - check for invalid input
+   ^     - print settings
    ^   o fun03 sec03 sub06:
+   ^     - check for help message requests
+   ^   o fun03 sec03 sub07:
+   ^     - check for invalid input
+   ^   o fun03 sec03 sub08:
    ^     - move to the next argument
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
@@ -451,6 +563,12 @@ input_findDIFrag(
          *fqFileStrPtr = (schar *) argAryStr[siArg];
       } /*If: a fastq file was input*/
 
+      else if(! eql_charCp("-ref", argAryStr[siArg], 0))
+      { /*If: a reference fasta file was input*/
+         ++siArg;
+         *refFileStrPtr = (schar *) argAryStr[siArg];
+      } /*If: a reference fasta file was input*/
+
       else if(! eql_charCp("-out", argAryStr[siArg], 0))
       { /*Else If: an output file was input*/
          ++siArg;
@@ -465,7 +583,7 @@ input_findDIFrag(
 
       /**************************************************\
       * Fun03 Sec03 Sub02:
-      *   - get deletion counts
+      *   - DI detection settings
       \**************************************************/
 
       else if(! eql_charCp("-min-del",argAryStr[siArg],0))
@@ -516,6 +634,97 @@ input_findDIFrag(
 
       /**************************************************\
       * Fun03 Sec03 Sub03:
+      *   - read filter (score and kmer) settings
+      \**************************************************/
+
+      else if(
+         ! eql_charCp(
+            "-score-min-perc",
+             argAryStr[siArg],
+             0
+           )
+      ){ /*Else If: input the min score (as %)*/
+         ++siArg;
+         *scoreMinPercF = atof(argAryStr[siArg]);
+         /*error value is 0, which is valid input*/
+
+         if(
+               *scoreMinPercF > 1
+            || *scoreMinPercF < 1
+         ){ /*If: score is to high*/
+            fprintf(
+               stderr,
+               "-score-min-perc %s must be between 0 and",
+               argAryStr[siArg]
+            );
+
+            fprintf(
+               stderr,
+               " 1\n"
+            );
+
+            goto err_fun03_sec04;
+         } /*If: score is to high*/
+      } /*Else If: input the min score (as %)*/
+
+      else if(
+         ! eql_charCp(
+            "-kmer-min-perc",
+             argAryStr[siArg],
+             0
+           )
+      ){ /*Else If: input the min score (as %)*/
+         ++siArg;
+         *kmerMinPercF = atof(argAryStr[siArg]);
+         /*error value is 0, which is valid input*/
+
+         if(
+               *kmerMinPercF > 1
+            || *kmerMinPercF < 1
+         ){ /*If: score is to high*/
+            fprintf(
+               stderr,
+               "-kmer-min-perc %s must be between 0 and",
+               argAryStr[siArg]
+            );
+
+            fprintf(
+               stderr,
+               " 1\n"
+            );
+
+            goto err_fun03_sec04;
+         } /*If: score is to high*/
+      } /*Else If: input the min score (as %)*/
+
+      /**************************************************\
+      * Fun03 Sec03 Sub04:
+      *   - kmer size setting
+      \**************************************************/
+
+      else if(!eql_charCp("-len-kmer",argAryStr[siArg],0))
+      { /*Else If: kmer length was input*/
+         tmpStr =
+            (schar *)
+            strToUC_base10str(
+               argAryStr[siArg],
+               *lenKmerUCPtr
+            );
+
+         if(*tmpStr != '\0')
+         { /*If: invalid input*/
+            fprintf(
+               stderr,
+               "-len-kmer %s is non-numeric or > 255\n",
+               argAryStr[siArg]
+            );
+
+            goto err_fun03_sec04;
+         } /*If: invalid input*/
+      } /*Else If: kmer length was input*/
+
+      /**************************************************\
+      * Fun03 Sec03 Sub05:
       *   - print settings
       \**************************************************/
 
@@ -532,7 +741,7 @@ input_findDIFrag(
          *pVRnaBlPtr = 0;
 
       /**************************************************\
-      * Fun03 Sec03 Sub04:
+      * Fun03 Sec03 Sub06:
       *   - check for help message requests
       \**************************************************/
 
@@ -552,7 +761,7 @@ input_findDIFrag(
          goto phelp_fun03_sec04;
 
       /**************************************************\
-      * Fun03 Sec03 Sub04:
+      * Fun03 Sec03 Sub07:
       *   - check for version number requests
       \**************************************************/
 
@@ -572,7 +781,7 @@ input_findDIFrag(
          goto pversion_fun03_sec04;
 
       /**************************************************\
-      * Fun03 Sec03 Sub05:
+      * Fun03 Sec03 Sub08:
       *   - check for invalid input
       \**************************************************/
 
@@ -588,7 +797,7 @@ input_findDIFrag(
       } /*Else: input not recongnized*/
 
       /**************************************************\
-      * Fun03 Sec03 Sub06:
+      * Fun03 Sec03 Sub09:
       *   - move to the next argument
       \**************************************************/
 
@@ -663,6 +872,7 @@ main(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    schar *fqFileStr = 0;
+   schar *refFileStr = 0;
    schar *outFileStr = 0;
    schar *samFileStr = 0; /*save alignments to*/
 
@@ -670,6 +880,7 @@ main(
    schar pVRnaBl = def_pVRna_findDIFrag;
 
    schar errSC = 0;
+   schar *tmpStr = 0;
 
    sint segSI = 0; /*index of segment read mapped to*/
    sint numDIEventsSI = 0; /*number DI events in seq*/
@@ -678,9 +889,12 @@ main(
 
    /*scoring variables for waterman*/
    float minPercScoreF = def_minPercScore_findDIFrag;
+   float minKmerPercF = def_minKmerPerc_findDIFrag;
+      /*min % of shared kmers needed to keep*/
 
-   uchar lenKmerUC = def_lenKmer_findDIFrag;/*kmer length*/
-   sint *kmerHeapArySI = 0; /*for get_kmerCnt*/;
+   uchar lenKmerUC = def_lenKmer_findDIFrag;/*kmer len*/
+   sint numKmersSI = 0;     /*how many kmers shared*/
+   sint *kmerHeapTblSI = 0; /*for get_kmerCnt*/;
    sint *cntHeapArySI = 0;  /*for get_kmerCnt*/
    uint maxKmerUI = 0;      /*for allocating arrays*/
 
@@ -691,7 +905,9 @@ main(
    struct seqST seqStackST;
    struct alnSet alnSetStackST;
    struct dirMatrix matrixStackST;
-   struct kmerCnt kmerStackAryST[def_NSNum_fragSeg + 1];
+
+   struct kmerCnt *kmerHeapAryST = 0;
+   uint numRefUI = 0;
 
    uint seqEntryUI = 0; /*entry error happend on*/
    FILE *fqFILE = 0;
@@ -708,7 +924,7 @@ main(
    ^   o main sec02 sub03:
    ^     - allocate memory for samEntry structure
    ^   o main sec02 sub04:
-   ^     - setup and add references to kmerCnt structures
+   ^     - read in reference sequences
    ^   o main sec02 sub05:
    ^     - allocate memory for kmer arrays
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
@@ -723,12 +939,6 @@ main(
    init_dirMatrix(&matrixStackST);
    init_samEntry(&samStackST);
 
-   for(
-     segSI = 0;
-     segSI < def_NSNum_fragSeg + 1;
-     ++segSI
-   ) init_kmerCnt(&kmerStackAryST[segSI]);
-
    /*****************************************************\
    * Main Sec02 Sub02:
    *   - get user input
@@ -739,8 +949,12 @@ main(
          numArgsSI,
          argAryStr,
          &fqFileStr,
+         &refFileStr,
          &outFileStr,
          &samFileStr,
+         &minPercScoreF,
+         &minKmerPercF,
+         &lenKmerUC,
          &minDIDelUI,
          &minPadNtUI,   /*min pad length to count DI*/
          &pDIRnaBl,
@@ -765,61 +979,41 @@ main(
 
    /*****************************************************\
    * Main Sec02 Sub04:
-   *   - setup and add references to kmerCnt structures
+   *   - read in reference sequences
    \*****************************************************/
 
-   for(
-     segSI = 0;
-     segSI <= def_NSNum_fragSeg;
-     ++segSI
-   ){ /*Loop: initialize kmerCnt array*/
-      errSC =
-         setup_kmerCnt(
-            &kmerStackAryST[segSI],
-            lenKmerUC
-         ); /*allocate memory for kmerCnt structures*/
-
-      if(errSC)
-         goto memErr_main_sec05_sub02;
-         
-      /*add in sequence*/
-      seqStackST.seqStr =
-          (char *)
-          segSeqAryStr_fragSeg[segSI];
-
-      seqStackST.lenSeqUL =
-         lenStr_ulCp(
-            segSeqAryStr_fragSeg[segSI],
-            0,
-            0
-         ); /*get sequence length*/
-
-      /*add in segment id*/
-      seqStackST.idStr =
-         (char *)
-         segIdAryStr_fragSeg[segSI];
-
-      seqStackST.lenIdUL =
-         lenStr_charCp(
-            (char *) segIdAryStr_fragSeg[segSI],
-            0
-         ); /*get sequence length*/
-
-      errSC =
-         addSeq_kmerCnt(
-            &kmerStackAryST[segSI],
-            &seqStackST
-         ); /*add flu segment to array*/
-
-       seqStackST.seqStr = 0;
-       seqStackST.idStr = 0;
-
-      if(errSC)
-         goto memErr_main_sec05_sub02;
-   } /*Loop: initialize kmerCnt array*/
+   kmerHeapAryST =
+      faToKmerCnt_kmerCnt(
+         refFileStr,
+         lenKmerUC,
+         &numRefUI,
+         &errSC
+      );
 
    if(errSC)
-      goto memErr_main_sec05_sub02;
+   { /*If: had an error*/
+      if(errSC == def_memErr_kmerCnt)
+      { /*If: had memory error*/
+         fprintf(
+            stderr,
+            "MEMORY error reading -ref %s\n",
+            refFileStr
+         );
+
+         goto memErr_main_sec05_sub02;
+      } /*If: had memory error*/
+
+      else
+      { /*Else:was a file error*/
+         fprintf(
+            stderr,
+            "coult not open/invalid entry in -ref %s\n",
+            refFileStr
+         );
+
+         goto fileErr_main_sec05_sub03;
+      } /*Else:was a file error*/
+   } /*If: had an error*/
 
    /*****************************************************\
    * Main Sec02 Sub05:
@@ -837,9 +1031,9 @@ main(
      ++segSI
    ) maxKmerUI <<= 2;
 
-   kmerHeapArySI = malloc((maxKmerUI + 1) * sizeof(sint));
+   kmerHeapTblSI = malloc((maxKmerUI + 1) * sizeof(sint));
 
-   if(! kmerHeapArySI)
+   if(! kmerHeapTblSI)
       goto memErr_main_sec05_sub02;
 
    cntHeapArySI = malloc((maxKmerUI + 1) * sizeof(sint));
@@ -918,24 +1112,48 @@ main(
    *   - open sam output file
    \*****************************************************/
 
+   
    if(samFileStr)
    { /*If: user input an sam output file*/
-      samFILE = 
-         fopen(
-            (char *) samFileStr,
-            "w"
-         ); /*open output file*/
+      if(*samFileStr == '-')
+      { /*If: outputing to stdout*/
+         if(outFILE == stdout)
+         { /*If: have output conflict*/
+            fprintf(
+               stderr,
+               "you can not set both -out and -out-sam\n"
+            );
 
-      if(! samFILE)
-      { /*If: could not open file*/
-         fprintf(
-            stderr,
-            "could not open -out-sam %s\n",
-            samFileStr
-         );
+            fprintf(
+               stderr,
+               "  to stdout (-out is stdout by default)\n"
+            );
 
-         goto fileErr_main_sec05_sub03;
-      } /*If: could not open file*/
+            goto fileErr_main_sec05_sub03;
+         } /*If: have output conflict*/
+
+         samFILE = stdout;
+      } /*If: outputing to stdout*/
+
+      else
+      { /*Else: sam file is a file*/
+          samFILE = 
+             fopen(
+                (char *) samFileStr,
+                "w"
+             ); /*open output file*/
+
+          if(! samFILE)
+          { /*If: could not open file*/
+             fprintf(
+                stderr,
+                "could not open -out-sam %s\n",
+                samFileStr
+             );
+
+             goto fileErr_main_sec05_sub03;
+          } /*If: could not open file*/
+      } /*Else: sam file is a file*/
    } /*If: user input an sam output file*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -960,7 +1178,10 @@ main(
    *   - print out header(s)
    \*****************************************************/
 
-   phead_diScan(outFILE); /*print header*/
+   phead_diScan(
+      outFILE,
+      lenKmerUC
+   ); /*print header*/
 
    if(samFILE)
    { /*If: printing to sam file*/
@@ -969,16 +1190,32 @@ main(
          "@HD\tVN:1.6\tSO:unsorted\tGO:none\n"
       );
 
+      tmpStr =
+         (schar *)
+         kmerHeapAryST[segSI].forSeqST->idStr;
+
+      while(*tmpStr++ > 32) ;
+      *(tmpStr - 1) = '\0';
+
       for(
          segSI = 0;
-         segSI <= def_NSNum_fragSeg;
+         segSI < (sint) numRefUI;
          ++segSI
       ){ /*Loop: print out sequence headers*/
+
+         tmpStr =
+            (schar *)
+            kmerHeapAryST[segSI].forSeqST->idStr;
+
+         while(*tmpStr++ > 32) ;
+
+         *(tmpStr - 1) = '\0';
+
          fprintf(
             samFILE,
             "@SQ\tSN:%s\tLN:%lu\n",
-            kmerStackAryST[segSI].forSeqST->idStr,
-            kmerStackAryST[segSI].forSeqST->lenSeqUL
+            kmerHeapAryST[segSI].forSeqST->idStr + 1,
+            kmerHeapAryST[segSI].forSeqST->lenSeqUL
          );
       } /*Loop: print out sequence headers*/
 
@@ -1015,10 +1252,28 @@ main(
      fprintf(samFILE, " -out-sam %s\n", samFileStr);
    } /*If: printing to sam file*/
 
+   else
+   { /*Else: remove extra header*/
+      for(
+         segSI = 0;
+         segSI < (sint) numRefUI;
+         ++segSI
+      ){ /*Loop: remove header metadata*/
+
+         tmpStr =
+            (schar *)
+            kmerHeapAryST[segSI].forSeqST->idStr;
+
+         while(*tmpStr++ > 32) ;
+         *(tmpStr - 1) = '\0';
+      } /*Loop: remove header metadata*/
+   } /*Else: remove extra header*/
+
    /*****************************************************\
    * Main Sec04 Sub02:
    *   - read in first sequence and start loop
    \*****************************************************/
+
    errSC =
      (schar)
      getFqSeq_seqST(
@@ -1041,16 +1296,18 @@ main(
       numDIEventsSI =
          waterScan_diScan(
             &seqStackST,    /*sequence*/
-            kmerStackAryST,/*references*/
-            def_NSNum_fragSeg + 1, /*last segment in FLU*/
-            kmerHeapArySI,  /*gets kmers in sequence*/
+            kmerHeapAryST,  /*references*/
+            numRefUI,       /*number of refs to map*/
+            kmerHeapTblSI,  /*gets kmers in sequence*/
             cntHeapArySI,   /*gets sequenced kmer counts*/
             minPercScoreF,  /*min align score to keep*/
+            minKmerPercF,   /*min % of kmers needed*/
             lenKmerUC,      /*length of one kmer*/
             minDIDelUI,     /*min deletion size to be DI*/
             minPadNtUI,     /*min nt at ends before DI*/
             &samStackST,    /*will have aligned sequence*/
             &segSI,         /*returned segment number*/
+            &numKmersSI,    /*holds number kmers shared*/
             &alnSetStackST, /*alignment settings*/
             &matrixStackST  /*matrix for waterman to use*/
          );
@@ -1074,7 +1331,8 @@ main(
       samStackST.lenRefIdUC =
          cpDelim_charCp(
             (char *) samStackST.refIdStr,
-            (char *) segIdAryStr_fragSeg[segSI],
+            (char *)
+               kmerHeapAryST[segSI].forSeqST->idStr + 1,
             '\0'
          ); /*copy the mapped segment id*/
 
@@ -1084,8 +1342,9 @@ main(
             pfrag_diScan(
                &samStackST,
                numDIEventsSI,
-               segLenArySS_fragSeg[segSI],
+               kmerHeapAryST[segSI].forSeqST->lenSeqUL,
                matrixStackST.scoreSL,
+               numKmersSI,
                outFILE
             );
 
@@ -1104,8 +1363,9 @@ main(
          pfrag_diScan(
             &samStackST,
             numDIEventsSI,
-            segLenArySS_fragSeg[segSI],
+            kmerHeapAryST[segSI].forSeqST->lenSeqUL,
             matrixStackST.scoreSL,
+            numKmersSI,
             outFILE
          );
 
@@ -1241,17 +1501,19 @@ main(
 
    samFILE = 0;
 
-   free(kmerHeapArySI);
+   free(kmerHeapTblSI);
    free(cntHeapArySI);
 
    freeStack_seqST(&seqStackST);
    freeStack_alnSet(&alnSetStackST);
    freeStack_dirMatrix(&matrixStackST);
 
-   freeStackAry_kmerCnt(
-      kmerStackAryST,
-      def_NSNum_fragSeg
+   freeHeapAry_kmerCnt(
+      kmerHeapAryST,
+      numRefUI
    );
+
+   kmerHeapAryST = 0;
 
    free(buffHeapStr);
    buffHeapStr = 0;

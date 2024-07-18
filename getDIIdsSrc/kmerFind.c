@@ -2930,6 +2930,8 @@ phit_kmerFind(
    schar oldRefBreakSC = 0;
    schar oldSeqBreakSC = 0;
 
+   uchar skip1stCharUC = 0;
+
    oldSeqStr = (schar *) seqSTPtr->idStr;
    while(*oldSeqStr++ > 32);
    --oldSeqStr;
@@ -2953,6 +2955,7 @@ phit_kmerFind(
    \*****************************************************/
 
    siRef = 0;
+   skip1stCharUC = *refAryST[siRef].forSeqST->idStr =='>';
 
    while(siRef < numRefsSI)
    { /*Loop: print out hits*/
@@ -2991,21 +2994,13 @@ phit_kmerFind(
 
          fprintf(
              (FILE *) outFILE,
-             "%s\t%c\t%lu\t%lu",
+             "%s\t%s",
              seqSTPtr->idStr + 1,
-             dirArySC[siRef],
-             seqStartAryUL[siRef],
-             seqEndAryUL[siRef]
-         ); /*forward primer mapping coordinates*/
+             refAryST[siRef].forSeqST->idStr
+                + skip1stCharUC
+         ); /*ids*/
 
-         fprintf(
-             (FILE *) outFILE,
-             "\t%c\t%lu\t%lu",
-             dirArySC[siMate],
-             seqStartAryUL[siMate],
-             seqEndAryUL[siMate]
-         ); /*reverse primer mapping coordinates*/
-
+         /*print out aligned length*/
          if(seqStartAryUL[siRef] < seqEndAryUL[siMate])
          { /*If: the mate comes last (forward read)*/
             fprintf(
@@ -3024,6 +3019,22 @@ phit_kmerFind(
             ); /*sequence length including primers*/
          } /*Else: the mate comes first (reverse read)*/
 
+         fprintf(
+             (FILE *) outFILE,
+             "\t%c\t%lu\t%lu",
+             dirArySC[siRef],
+             seqStartAryUL[siRef],
+             seqEndAryUL[siRef]
+         ); /*forward primer mapping coordinates*/
+
+         fprintf(
+             (FILE *) outFILE,
+             "\t%c\t%lu\t%lu",
+             dirArySC[siMate],
+             seqStartAryUL[siMate],
+             seqEndAryUL[siMate]
+         ); /*reverse primer mapping coordinates*/
+
          oldRefStr =
             (schar *) refAryST[siRef].forSeqST->idStr;
 
@@ -3038,8 +3049,7 @@ phit_kmerFind(
          /*print primer ids*/
          fprintf(
              (FILE *) outFILE,
-             "\t%s\t%0.2f\t%0.2f\t%i\t%lu\t%lu",
-             refAryST[siRef].forSeqST->idStr,
+             "\t%0.2f\t%0.2f\t%i\t%lu\t%lu",
              (float)
                 scoreArySL[siRef] / def_scoreAdj_alnDefs,
              (float)
@@ -3089,8 +3099,10 @@ phit_kmerFind(
       { /*Else: I have no mate primers*/
          fprintf(
              (FILE *) outFILE,
-             "%s\t%c\t%lu\t%lu",
-             seqSTPtr->idStr,
+             "%s\t%s\tNA\t%c\t%lu\t%lu",
+             seqSTPtr->idStr + 1,
+             refAryST[siRef].forSeqST->idStr
+                + skip1stCharUC,
              dirArySC[siRef],
              seqStartAryUL[siRef],
              seqEndAryUL[siRef]
@@ -3098,7 +3110,7 @@ phit_kmerFind(
 
          fprintf(
              (FILE *) outFILE,
-             "\tNA\tNA\tNA\tNA\tNA"
+             "\tNA\tNA\tNA"
          ); /*mate coordinates and mapped length*/
 
          oldRefStr =
@@ -3114,8 +3126,7 @@ phit_kmerFind(
 
          fprintf(
              (FILE *) outFILE,
-             "\t%s\t%0.2f\t%0.2f\t%i\t%lu\t%lu",
-             refAryST[siRef].forSeqST->idStr,
+             "\t%0.2f\t%0.2f\t%i\t%lu\t%lu",
              (float)
                 scoreArySL[siRef] / def_scoreAdj_alnDefs,
              (float)
@@ -3130,7 +3141,7 @@ phit_kmerFind(
 
          fprintf(
              (FILE *) outFILE,
-             "\tNA\tNA\tNA\tNA\n"
+             "\tNA\tNA\tNA\tNA\tNA\n"
          ); /*reverse primer mapping stats*/
       } /*Else: I have no mate primers*/
 
@@ -3163,17 +3174,17 @@ pHeaderHit_kmerFind(
 ){
    fprintf(
       (FILE *) outFILE,
-      "read_id\tfor_dir\tfor_seq_start\tfor_seq_end"
+      "read_id\tprim_id\taln_len\tfor_dir\tfor_seq_start"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "\trev_dir\trev_start\trev_end\tlength"
+      "\tfor_seq_end\trev_dir\trev_start\trev_end"
    );
 
    fprintf(
       (FILE *) outFILE,
-      "\tprim_id\tfor_score\tfor_max_score"
+      "\tfor_score\tfor_max_score"
    );
 
    fprintf(

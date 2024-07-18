@@ -19,6 +19,8 @@ core:
 side:
 	make CC=$(CC) MACCFLAGS=$(CFLAGS) mac -C memwater
 	make CC=$(CC) MACCFLAGS=$(CFLAGS) mac -C water
+	make CC=$(CC) MACCFLAGS=$(CFLAGS) mac buildPrim -C getDIIds
+	make CC=$(CC) MACCFLAGS=$(STATICCFLAGS) mac -C samRefBinSrc
 
 staticCore:
 	make CC=$(CC) CFLAGS=$(STATICCFLAGS) -C getDIIdsSrc
@@ -26,8 +28,10 @@ staticCore:
 	make CC=$(CC) CFLAGS=$(STATICCFLAGS) -C findDIFragSrc
 
 staticSide:
-	make CC=$(CC) CFLAGS=$(STATICCFLAGS) mac -C memwater
-	make CC=$(CC) CFLAGS=$(STATICCFLAGS) mac -C water
+	make CC=$(CC) CFLAGS=$(STATICCFLAGS) -C memwater
+	make CC=$(CC) CFLAGS=$(STATICCFLAGS) -C water
+	make CC=$(CC) CFLAGS=$(STATICCFLAGS) buildPrim -C getDIIds
+	make CC=$(CC) CFLAGS=$(STATICCFLAGS) -C samRefBinSrc
 
 all: core side
 
@@ -58,9 +62,13 @@ allInstallSub:
 	mv findDIFragSrc/findDIFrag $(PREFIX)
 	mv memwater/alnMemwater $(PREFIX)
 	mv water/alnwater $(PREFIX)
+	mv getDIIdsSrc/primFind $(PREFIX)
+	mv samRefBin/samRefBin $(PREFIX)
 
 	chmod a+x $(PREFIX)/getDIIds
 	chmod a+x $(PREFIX)/getDICoords
 	chmod a+x $(PREFIX)/findDIFrag
 	chmod a+x $(PREFIX)/alnMemwater
 	chmod a+x $(PREFIX)/alnwater
+	chmod a+x $(PREFIX)/primFind
+	chmod a+x $(PREFIX)/samRefBin

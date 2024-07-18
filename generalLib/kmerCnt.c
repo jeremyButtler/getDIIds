@@ -42,6 +42,9 @@
 '   o fun12: get_kmerCnt
 '     - gets number of matching kmers between a kmerCnt
 '       structure and the kmer arrays
+'   o fun13: faToKmerCnt_kmerCnt
+'     - converts a the sequences in a fasta file to a
+'       kmerCnt array
 '   o license:
 '     - licensing for this code (public domain / mit)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -58,6 +61,8 @@
    #include <stdlib.h>
 #endif
 
+#include <stdio.h>
+
 #include "kmerCnt.h"
 
 #include "seqST.h"
@@ -70,7 +75,6 @@
 
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\
 ! Hidden libraries:
-!   - std #include <stdio.h>
 !   - .h  #include "ulCp.h"
 \%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
@@ -769,6 +773,259 @@ get_kmerCnt(
 
    return forKmersSI;
 } /*get_kmerCnt*/
+
+/*-------------------------------------------------------\
+| Fun13: faToKmerCnt_kmerCnt
+|   - converts a the sequences in a fasta file to a
+|     kmerCnt array
+| Input:
+|   - faFileStr:
+|     o path to and name of fasta file with sequnces
+|   - lenKmerUC:
+|     o length of one kmer
+|   - numSeqUI:
+|     o pointer to unsigned int to hold the number of
+|       sequences in the kmerCnt array
+|   - errSCPtr:
+|     o pointer to signed char to hold the errors
+| Output:
+|   - Modfies:
+|     o numSeqUI to have the number of sequences in the
+|       returned kmerCnt array
+|     o errSCPtr to hold errors
+|       - 0 for no erors
+|       - def_fileErr_kmerCnt if could not open faFileStr
+|       - def_memErr_kmerCnt for memory errors
+\-------------------------------------------------------*/
+struct kmerCnt *
+faToKmerCnt_kmerCnt(
+   signed char *faFileStr,/*path to fasta file*/
+   unsigned char lenKmerUC, /*length of one kmer*/
+   unsigned int *numSeqUI,/*will hold number of sequnces*/
+   signed char *errSCPtr  /*holds error message*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun13 TOC:
+   '   - converts a the sequences in a fasta file to a
+   '     kmerCnt array
+   '   o fun13 sec01:
+   '     - variable declerations
+   '   o fun13 sec02:
+   '     - find number of sequences in fasta file
+   '   o fun13 sec03:
+   '     - allocate and initialize kmerCnt array
+   '   o fun13 sec04:
+   '     - add sequences to kmerCnt array
+   '   o fun13 sec05:
+   '     - clean up and return
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun13 Sec01:
+   ^   - variable declerations
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   schar errSC = 0;
+
+   uint uiSeq = 0;
+   struct kmerCnt *retHeapAryST = 0;
+
+   struct seqST seqStackST;
+   FILE *faFILE = 0;
+   
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun13 Sec02:
+   ^   - find number of sequences in fasta file
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   init_seqST(&seqStackST);
+
+   faFILE =
+      fopen(
+         (char *) faFileStr,
+         "r"
+      );
+
+   if(! faFILE)
+      goto fileErr_fun13_sec05_sub03;
+
+   *numSeqUI = 0;
+   uiSeq = 0;
+
+   errSC =
+      (schar)
+      getFaSeq_seqST(
+         faFILE,
+         &seqStackST
+      );   
+
+   while(! errSC)
+   { /*Loop: Count number of sequences in file*/
+      ++(uiSeq);
+
+      errSC =
+         (schar)
+         getFaSeq_seqST(
+            (char *) faFILE,
+            &seqStackST
+         );   
+   } /*Loop: Count number of sequences in file*/
+
+   if(uiSeq < 1)
+      goto fileErr_fun13_sec05_sub03;
+
+   if(errSC == def_memErr_seqST)
+      goto memErr_fun13_sec05_sub02;
+
+   if(errSC != def_EOF_seqST)
+      goto fileErr_fun13_sec05_sub03;
+   
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun13 Sec03:
+   ^   - allocate and initialize kmerCnt array
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   retHeapAryST = malloc(uiSeq * sizeof(struct kmerCnt));
+
+   if(! retHeapAryST)
+      goto memErr_fun13_sec05_sub02;
+
+   for(
+      *numSeqUI = 0;
+      *numSeqUI < uiSeq;
+      ++(*numSeqUI)
+   ){ /*Loop: initialize and set up structures*/
+      init_kmerCnt(&retHeapAryST[*numSeqUI]);
+
+      errSC =
+         setup_kmerCnt(
+            &retHeapAryST[*numSeqUI],
+            lenKmerUC
+         );
+
+      if(errSC)
+         goto memErr_fun13_sec05_sub02;
+   } /*Loop: initialize and set up structures*/
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun13 Sec04:
+   ^   - add sequences to kmerCnt array
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   uiSeq = 0;
+
+   fseek(faFILE, 0, SEEK_SET);
+
+   errSC =
+      (schar)
+      getFaSeq_seqST(
+         faFILE,
+         &seqStackST
+      );   
+
+   while(! errSC)
+   { /*Loop: Count number of sequences in file*/
+      errSC =
+         addSeq_kmerCnt(
+            &retHeapAryST[uiSeq],
+            &seqStackST
+         );
+
+      if(errSC)
+         goto memErr_fun13_sec05_sub02;
+
+      errSC =
+         (schar)
+         getFaSeq_seqST(
+            faFILE,
+            &seqStackST
+         ); /*already checked for errors*/
+
+      ++uiSeq;
+   } /*Loop: Count number of sequences in file*/
+
+   /*already checked for file errors*/
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun13 Sec05:
+   ^   - clean up and return
+   ^   o fun13 sec05 sub01:
+   ^     - clean up after no errors
+   ^   o fun13 sec05 sub02:
+   ^     - memory error clean
+   ^   o fun13 sec05 sub03:
+   ^     - file error clean
+   ^   o fun13 sec05 sub04:
+   ^     - clean up return varible (errors only)
+   ^   o fun13 sec05 sub05:
+   ^     - clean up variables always cleaned up
+   ^       (error/no error)
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+ 
+   /*****************************************************\
+   * Fun13 Sec05 Sub01:
+   *   - clean up after no errors
+   \*****************************************************/
+
+   goto cleanUp_fun13_sec05_sub05;
+
+   /*****************************************************\
+   * Fun13 Sec05 Sub02:
+   *   - memory error clean
+   \*****************************************************/
+
+   memErr_fun13_sec05_sub02:;
+
+   *errSCPtr = def_memErr_kmerCnt;
+
+   goto errCleanUp_fun13_sec05_sub04;
+
+   /*****************************************************\
+   * Fun13 Sec05 Sub03:
+   *   - file error clean
+   \*****************************************************/
+
+   fileErr_fun13_sec05_sub03:;
+
+   *errSCPtr = def_fileErr_kmerCnt;
+
+   goto errCleanUp_fun13_sec05_sub04;
+
+   /*****************************************************\
+   * Fun13 Sec05 Sub04:
+   *   - clean up return varible for errors
+   \*****************************************************/
+
+   errCleanUp_fun13_sec05_sub04:;
+
+   freeHeapAry_kmerCnt(
+      retHeapAryST,
+      *numSeqUI
+   );
+
+   retHeapAryST = 0;
+
+   goto cleanUp_fun13_sec05_sub05;
+
+   /*****************************************************\
+   * Fun13 Sec05 Sub05:
+   *   - clean up variables always cleaned up
+   *     (error/no error)
+   \*****************************************************/
+
+   cleanUp_fun13_sec05_sub05:;
+
+   freeStack_seqST(&seqStackST);
+
+   if(
+         faFILE
+      && faFILE != stdin
+      && faFILE != stdout
+   ) fclose(faFILE);
+
+   faFILE = 0;
+
+   return retHeapAryST;
+} /*faToKmerCnt_kmerCnt*/
 
 /*=======================================================\
 : License:
