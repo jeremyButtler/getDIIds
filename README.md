@@ -211,11 +211,6 @@ getDICoords outputs a tsv with the coordinates of detected
   - Column 4 is the start of one DI event
   - Column 5 is the end of one DI event
 
-## samClust
-
-Currently thinking about (no were near working). Goal is a
-  clustering program for reads.
-
 ### How getDICoords works:
 
 Basically step 6 of findDIFrag, with coordinate recording.
@@ -227,6 +222,11 @@ Basically step 6 of findDIFrag, with coordinate recording.
 3. The start and end of all DI events are recorded
 4. Print read id, number DI events, and coordinates
    for each DI event
+
+## samClust
+
+Currently thinking about (no were near working). Goal is a
+  clustering program for reads.
 
 # Updates:
 
